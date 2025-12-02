@@ -49,40 +49,36 @@ export async function POST(request: NextRequest) {
 
     // --- 🚨 MODERATION CHECK START ---
     try {
-      // 1. Construct the API URL for Sightengine
-      // We check for 'nudity', 'wad' (Weapon, Alcohol, Drugs), and 'offensive' text
       const params = new URLSearchParams({
         'models': 'nudity,wad,offensive',
         'api_user': process.env.SIGHTENGINE_USER!,
         'api_secret': process.env.SIGHTENGINE_SECRET!,
-        'url': body.thumbnailUrl, // Check the thumbnail image
+        'url': body.thumbnailUrl,
       });
 
       const moderationRes = await fetch(`https://api.sightengine.com/1.0/check.json?${params}`);
       const result = await moderationRes.json();
 
-      // 2. Analyze the result
-      // "nudity.safe" is a score from 0 to 1. (1 = Very Safe, 0 = Very NSFW)
-      // "wad" (Weapons/Alcohol/Drugs) returns probability > 0.5 if present
-      
-      const isSafe = result.nudity?.safe > 0.8; // Must be 80% sure it's safe
+      // Logic Update: Check for explicit guilt
+      const hasRawNudity = result.nudity?.raw > 0.8;
       const hasWeapon = result.weapon > 0.5;
       const hasAlcohol = result.alcohol > 0.5;
 
-      // 3. Reject if unsafe
-      if (!isSafe || hasWeapon || hasAlcohol) {
+      if (hasRawNudity || hasWeapon || hasAlcohol) {
+        console.log("Blocked due to:", { hasRawNudity, hasWeapon, hasAlcohol });
         return NextResponse.json(
-          { error: "Upload failed: Content violates community guidelines (NSFW/Violence detected)." },
+          { error: "Upload failed: Content detected as Explicit or Unsafe." },
           { status: 400 }
         );
       }
     } catch (modError) {
+      // If the moderation API fails (network error, etc), we log it but allow the upload
+      // (Or you can return an error here if you want to be strict)
       console.error("Moderation API failed:", modError);
-      // Optional: You can choose to fail the upload if moderation fails, 
-      // or allow it and flag it for review. For now, we log it.
     }
     // --- 🚨 MODERATION CHECK END ---
 
+    // Create the video in the database
     const videoData = {
       ...body,
       uploader: session.user.id,
@@ -90,6 +86,7 @@ export async function POST(request: NextRequest) {
 
     const newVideo = await Video.create(videoData);
     return NextResponse.json(newVideo);
+
   } catch (error) {
     return NextResponse.json(
       { error: "Failed to create video" },
