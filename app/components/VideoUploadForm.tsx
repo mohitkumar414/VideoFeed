@@ -91,7 +91,11 @@ export default function VideoUploadForm() {
         }),
       });
 
-      if (!dbResponse.ok) throw new Error("Failed to save to database");
+      if (!dbResponse.ok) {
+        // Parse the error message from the backend
+        const errorData = await dbResponse.json();
+        throw new Error(errorData.error || "Failed to save to database");
+      }
 
       alert("Upload successful!");
       router.push("/feed");
