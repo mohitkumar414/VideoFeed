@@ -1,16 +1,21 @@
 import { Video } from "@imagekit/next";
 import { IVideo } from "@/models/Video";
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
+import { useSession } from "next-auth/react"; // Need session to know if "I" reacted
 
 interface VideoModalProps {
   video: IVideo;
   onClose: () => void;
-  onDelete: (videoId: string) => void; // Function to handle delete
-  canDelete: boolean; // Boolean to check ownership
+  onDelete: (videoId: string) => void;
+  canDelete: boolean;
 }
 
+const EMOJI_OPTIONS = ["👍", "❤️", "😂", "😮", "😢", "🔥"];
+
 export default function VideoModal({ video, onClose, onDelete, canDelete }: VideoModalProps) {
-  
+  const { data: session } = useSession();
+  const [reactions, setReactions] = useState(video.reactions || []);
+
   useEffect(() => {
     const handleEsc = (e: KeyboardEvent) => {
       if (e.key === "Escape") onClose();
@@ -19,10 +24,64 @@ export default function VideoModal({ video, onClose, onDelete, canDelete }: Vide
     return () => window.removeEventListener("keydown", handleEsc);
   }, [onClose]);
 
+  // Handle Reaction Click
+  const handleReaction = async (emoji: string) => {
+    if (!session) {
+      alert("Please login to react");
+      return;
+    }
+
+    // 1. Optimistic Update (Update UI immediately)
+    const userId = session.user.id;
+    const currentReactions = [...reactions];
+    const userReactionIndex = currentReactions.findIndex((r: any) => 
+      (r.user._id || r.user) === userId
+    );
+
+    let newReactions = [...currentReactions];
+
+    if (userReactionIndex > -1) {
+      if (currentReactions[userReactionIndex].emoji === emoji) {
+        // Toggle off
+        newReactions.splice(userReactionIndex, 1);
+      } else {
+        // Update emoji
+        newReactions[userReactionIndex] = { ...newReactions[userReactionIndex], emoji };
+      }
+    } else {
+      // Add new
+      newReactions.push({ user: userId, emoji });
+    }
+
+    setReactions(newReactions); // Update UI
+
+    // 2. Call API
+    try {
+      const res = await fetch("/api/video/reaction", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ videoId: video._id, emoji }),
+      });
+
+      if (!res.ok) {
+        // Revert if failed
+        setReactions(currentReactions);
+        alert("Failed to react");
+      }
+    } catch (error) {
+      setReactions(currentReactions);
+    }
+  };
+
   // Helper to get email safely
   const uploaderEmail = typeof video.uploader === 'object' && video.uploader?.email 
     ? video.uploader.email 
     : "Unknown User";
+
+  // Check if current user has reacted
+  const myReaction = reactions.find((r: any) => 
+    (r.user._id || r.user) === session?.user?.id
+  )?.emoji;
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-90 backdrop-blur-sm p-4">
@@ -51,13 +110,34 @@ export default function VideoModal({ video, onClose, onDelete, canDelete }: Vide
           <h2 className="text-2xl font-bold text-gray-900 mb-2">{video.title}</h2>
           <p className="text-gray-600 whitespace-pre-wrap flex-1 mb-4">{video.description}</p>
           
+          {/* --- REACTION SECTION --- */}
+          <div className="mb-6">
+            <h3 className="text-sm font-semibold text-gray-500 mb-2">Reactions</h3>
+            <div className="flex flex-wrap gap-2">
+              {EMOJI_OPTIONS.map((emoji) => (
+                <button
+                  key={emoji}
+                  onClick={() => handleReaction(emoji)}
+                  className={`px-3 py-2 rounded-full text-lg transition-all border ${
+                    myReaction === emoji 
+                      ? "bg-blue-100 border-blue-400 scale-110" 
+                      : "bg-gray-50 border-gray-200 hover:bg-gray-100"
+                  }`}
+                >
+                  {emoji} <span className="text-xs text-gray-600 ml-1">
+                    {reactions.filter((r: any) => r.emoji === emoji).length}
+                  </span>
+                </button>
+              ))}
+            </div>
+          </div>
+          {/* ------------------------- */}
+
           <div className="mt-auto pt-4 border-t border-gray-100">
-            {/* Display Uploader Email */}
             <p className="text-sm text-gray-500 mb-4">
               Uploaded by: <span className="font-medium text-gray-800">{uploaderEmail}</span>
             </p>
 
-            {/* Conditional Delete Button */}
             {canDelete && (
               <button
                 onClick={() => {
@@ -67,9 +147,6 @@ export default function VideoModal({ video, onClose, onDelete, canDelete }: Vide
                 }}
                 className="w-full flex items-center justify-center gap-2 bg-red-100 text-red-600 px-4 py-2 rounded-lg hover:bg-red-200 transition-colors font-medium"
               >
-                <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" className="w-5 h-5">
-                  <path strokeLinecap="round" strokeLinejoin="round" d="M14.74 9l-.346 9m-4.788 0L9.26 9m9.968-3.21c.342.052.682.107 1.022.166m-1.022-.165L18.16 19.673a2.25 2.25 0 01-2.244 2.077H8.084a2.25 2.25 0 01-2.244-2.077L4.772 5.79m14.456 0a48.108 48.108 0 00-3.478-.397m-12 .562c.34-.059.68-.114 1.022-.165m0 0a48.11 48.11 0 013.478-.397m7.5 0v-.916c0-1.18-.91-2.164-2.09-2.201a51.964 51.964 0 00-3.32 0c-1.18.037-2.09 1.022-2.09 2.201v.916m7.5 0a48.667 48.667 0 00-7.5 0" />
-                </svg>
                 Delete Video
               </button>
             )}

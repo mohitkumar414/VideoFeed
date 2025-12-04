@@ -18,6 +18,12 @@ export interface IVideo {
     email: string;
     username?: string;
   } | string; 
+  // --- NEW FIELD ---
+  reactions?: {
+    user: string | mongoose.Types.ObjectId;
+    emoji: string;
+  }[];
+  // ----------------
   createdAt?: Date;
   updatedAt?: Date;
 }
@@ -30,6 +36,14 @@ const videoSchema = new Schema<IVideo>(
     thumbnailUrl: { type: String, required: true },
     controls: { type: Boolean, default: true },
     uploader: { type: Schema.Types.ObjectId, ref: "User", required: true }, // This allows population
+    // --- NEW SCHEMA DEFINITION ---
+    reactions: [
+      {
+        user: { type: Schema.Types.ObjectId, ref: "User", required: true },
+        emoji: { type: String, required: true },
+      },
+    ],
+    // -----------------------------
   },
   { timestamps: true }
 );
