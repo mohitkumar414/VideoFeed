@@ -58,6 +58,16 @@ export default function FeedPage() {
     }
   };
 
+  // 1. ADD THIS FUNCTION
+  const handleVideoUpdate = (updatedVideo: IVideo) => {
+    // Update the main list so it persists when modal closes
+    setVideos((prev) => 
+      prev.map((v) => (v._id === updatedVideo._id ? updatedVideo : v))
+    );
+    // Update the currently selected video so the modal doesn't flicker
+    setSelectedVideo(updatedVideo);
+  };
+
   return (
     <div className="p-6 bg-gray-50 min-h-screen">
       <div className="flex flex-col sm:flex-row justify-between items-center mb-8 gap-4">
@@ -120,6 +130,8 @@ export default function FeedPage() {
               ? selectedVideo.uploader._id 
               : selectedVideo.uploader)
           }
+          // 2. PASS THE FUNCTION HERE
+          onVideoUpdate={handleVideoUpdate}
         />
       )}
     </div>

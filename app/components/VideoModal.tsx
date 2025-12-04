@@ -8,11 +8,13 @@ interface VideoModalProps {
   onClose: () => void;
   onDelete: (videoId: string) => void;
   canDelete: boolean;
+  // 1. ADD THIS NEW PROP
+  onVideoUpdate: (updatedVideo: IVideo) => void;
 }
 
 const EMOJI_OPTIONS = ["👍", "❤️", "😂", "😮", "😢", "🔥"];
 
-export default function VideoModal({ video, onClose, onDelete, canDelete }: VideoModalProps) {
+export default function VideoModal({ video, onClose, onDelete, canDelete, onVideoUpdate }: VideoModalProps) {
   const { data: session } = useSession();
   const [reactions, setReactions] = useState(video.reactions || []);
 
@@ -67,6 +69,18 @@ export default function VideoModal({ video, onClose, onDelete, canDelete }: Vide
         // Revert if failed
         setReactions(currentReactions);
         alert("Failed to react");
+      } else {
+        // 2. SUCCESS! GET DATA AND UPDATE PARENT
+        const data = await res.json();
+        
+        // Create a new video object with the updated reactions from the server
+        const updatedVideo = {
+          ...video,
+          reactions: data.reactions
+        };
+
+        // Tell the Feed Page to update its list
+        onVideoUpdate(updatedVideo);
       }
     } catch (error) {
       setReactions(currentReactions);
