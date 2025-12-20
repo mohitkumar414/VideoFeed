@@ -1,7 +1,7 @@
 import { IKVideo } from "imagekitio-next";
 import { IVideo } from "@/models/Video";
 import { useEffect, useState } from "react";
-import { useSession } from "next-auth/react"; 
+import { useSession } from "next-auth/react";
 
 interface VideoModalProps {
   video: IVideo;
@@ -34,7 +34,7 @@ export default function VideoModal({ video, onClose, onDelete, canDelete, onVide
 
     const userId = session.user.id;
     const currentReactions = [...reactions];
-    const userReactionIndex = currentReactions.findIndex((r: any) => 
+    const userReactionIndex = currentReactions.findIndex((r: any) =>
       (r.user._id || r.user) === userId
     );
 
@@ -74,13 +74,13 @@ export default function VideoModal({ video, onClose, onDelete, canDelete, onVide
     }
   };
 
-  const uploaderEmail = typeof video.uploader === 'object' && video.uploader?.email 
-    ? video.uploader.email 
+  const uploaderEmail = typeof video.uploader === 'object' && video.uploader?.email
+    ? video.uploader.email
     : "Unknown User";
-  
+
   const uploaderName = uploaderEmail.split("@")[0];
 
-  const myReaction = reactions.find((r: any) => 
+  const myReaction = reactions.find((r: any) =>
     (r.user._id || r.user) === session?.user?.id
   )?.emoji;
 
@@ -97,27 +97,34 @@ export default function VideoModal({ video, onClose, onDelete, canDelete, onVide
       </button>
 
       <div className="relative w-full max-w-6xl max-h-[90vh] flex flex-col md:flex-row bg-gray-900 rounded-xl overflow-hidden shadow-[0_0_50px_rgba(59,130,246,0.2)] border border-blue-500/20">
-        
         {/* LEFT: VIDEO PLAYER */}
         <div className="flex-1 bg-black flex items-center justify-center relative min-h-[40vh]">
-           <IKVideo
-              src={video.videoUrl}
-              urlEndpoint={process.env.NEXT_PUBLIC_URL_ENDPOINT}
-              controls={true}
-              autoPlay={true}
-              className="w-full h-full max-h-[85vh] object-contain"
-            />
+          {isBuffering && (
+            <div className="absolute inset-0 flex items-center justify-center z-10 pointer-events-none">
+              <div className="spinner"></div>
+            </div>
+          )}
+          <IKVideo
+            src={video.videoUrl}
+            urlEndpoint={process.env.NEXT_PUBLIC_URL_ENDPOINT}
+            controls={!isBuffering}
+            autoPlay={true}
+            className="w-full h-full max-h-[85vh] object-contain"
+            onLoadStart={() => setIsBuffering(true)}
+            onWaiting={() => setIsBuffering(true)}
+            onPlaying={() => setIsBuffering(false)}
+          />
         </div>
 
         {/* RIGHT: SIDEBAR DETAILS */}
         <div className="w-full md:w-96 bg-gray-900/95 border-l border-white/10 flex flex-col shrink-0">
-          
+
           {/* Header Section */}
           <div className="p-6 border-b border-white/10">
             <h2 className="text-2xl font-bold bg-gradient-to-r from-blue-400 to-purple-400 bg-clip-text text-transparent mb-1">
               {video.title}
             </h2>
-            
+
             <div className="flex items-center gap-2 mt-3">
               <div className="w-8 h-8 rounded-full bg-gradient-to-br from-gray-700 to-gray-600 flex items-center justify-center text-xs font-bold text-white border border-white/10">
                 {uploaderName[0].toUpperCase()}
@@ -135,10 +142,10 @@ export default function VideoModal({ video, onClose, onDelete, canDelete, onVide
               {video.description}
             </p>
           </div>
-          
+
           {/* Footer: Reactions & Actions */}
           <div className="p-6 bg-gray-800/50 border-t border-white/10">
-            
+
             {/* Reaction Dock */}
             <div className="mb-6">
               <div className="flex items-center justify-between mb-3">
@@ -153,15 +160,15 @@ export default function VideoModal({ video, onClose, onDelete, canDelete, onVide
                     className={`
                       relative w-10 h-10 flex items-center justify-center rounded-full text-lg transition-all duration-200
                       hover:scale-110 active:scale-95
-                      ${myReaction === emoji 
-                        ? "bg-blue-500/20 border border-blue-500 shadow-[0_0_10px_rgba(59,130,246,0.5)]" 
+                      ${myReaction === emoji
+                        ? "bg-blue-500/20 border border-blue-500 shadow-[0_0_10px_rgba(59,130,246,0.5)]"
                         : "bg-white/5 border border-white/5 hover:bg-white/10"}
                     `}
                   >
                     {emoji}
                     {/* Tiny counter badge for specific emoji */}
                     <span className="absolute -top-1 -right-1 text-[9px] bg-black text-gray-300 px-1 rounded-full">
-                       {reactions.filter((r: any) => r.emoji === emoji).length}
+                      {reactions.filter((r: any) => r.emoji === emoji).length}
                     </span>
                   </button>
                 ))}
@@ -172,7 +179,7 @@ export default function VideoModal({ video, onClose, onDelete, canDelete, onVide
             {canDelete && (
               <button
                 onClick={() => {
-                  if(confirm("Are you sure you want to delete this video?")) {
+                  if (confirm("Are you sure you want to delete this video?")) {
                     onDelete(video._id as string);
                   }
                 }}
@@ -187,7 +194,7 @@ export default function VideoModal({ video, onClose, onDelete, canDelete, onVide
           </div>
         </div>
       </div>
-      
+
       {/* Background Click to Close */}
       <div className="absolute inset-0 -z-10" onClick={onClose}></div>
     </div>

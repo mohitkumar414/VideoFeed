@@ -44,7 +44,6 @@ body {
   font-family: Arial, Helvetica, sans-serif;
 }
 
-
 .file-upload-wrapper input[type="file"] {
   color: #f70101; 
 }
@@ -84,4 +83,13 @@ body {
 .no-scrollbar {
   -ms-overflow-style: none;
   scrollbar-width: none;
+}
+
+video::-webkit-media-controls-loading-panel,
+video::-webkit-media-controls-buffering-container,
+video::-webkit-media-controls-overlay-play-button {
+  display: none !important;
+  -webkit-appearance: none;
+  opacity: 0 !important;
+  visibility: hidden !important;
 }
