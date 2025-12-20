@@ -1,4 +1,4 @@
-import { authOptions } from "@/app/api/auth/[...nextauth]/route"; // Verify this path matches your project
+import { authOptions } from "@/app/api/auth/[...nextauth]/route";
 import { connectToDatabase } from "@/lib/db";
 import Video, { IVideo } from "@/models/Video";
 import { getServerSession } from "next-auth";
@@ -7,7 +7,6 @@ import { NextRequest, NextResponse } from "next/server";
 export async function GET() {
   try {
     await connectToDatabase();
-    // POPULATE: This fetches the 'email' from the User collection
     const videos = await Video.find({})
       .sort({ createdAt: -1 })
       .populate("uploader", "email") 
@@ -26,10 +25,6 @@ export async function GET() {
   }
 }
 
-// app/api/video/route.ts
-
-// ... keep existing imports ...
-
 export async function POST(request: NextRequest) {
   try {
     const session = await getServerSession(authOptions);
@@ -47,7 +42,6 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // --- 🚨 MODERATION CHECK START ---
     try {
       const params = new URLSearchParams({
         'models': 'nudity,wad,offensive',
@@ -59,7 +53,7 @@ export async function POST(request: NextRequest) {
       const moderationRes = await fetch(`https://api.sightengine.com/1.0/check.json?${params}`);
       const result = await moderationRes.json();
 
-      // Logic Update: Check for explicit guilt
+      //Check for explicit guilt
       const hasRawNudity = result.nudity?.raw > 0.8;
       const hasWeapon = result.weapon > 0.5;
       const hasAlcohol = result.alcohol > 0.5;
@@ -72,11 +66,8 @@ export async function POST(request: NextRequest) {
         );
       }
     } catch (modError) {
-      // If the moderation API fails (network error, etc), we log it but allow the upload
-      // (Or you can return an error here if you want to be strict)
       console.error("Moderation API failed:", modError);
     }
-    // --- 🚨 MODERATION CHECK END ---
 
     // Create the video in the database
     const videoData = {
@@ -95,7 +86,7 @@ export async function POST(request: NextRequest) {
   }
 }
 
-// --- NEW DELETE ROUTE ---
+// DELETE ROUTE
 export async function DELETE(request: NextRequest) {
   try {
     const session = await getServerSession(authOptions);
@@ -115,7 +106,7 @@ export async function DELETE(request: NextRequest) {
       return NextResponse.json({ error: "Video not found" }, { status: 404 });
     }
 
-    // SECURITY CHECK: Only allow delete if the current user is the uploader
+    // Only allow delete if the current user is the uploader
     if (video.uploader.toString() !== session.user.id) {
       return NextResponse.json(
         { error: "You are not authorized to delete this video" },

@@ -1,14 +1,13 @@
-import { Video } from "@imagekit/next";
+import { IKVideo } from "imagekitio-next";
 import { IVideo } from "@/models/Video";
 import { useEffect, useState } from "react";
-import { useSession } from "next-auth/react"; // Need session to know if "I" reacted
+import { useSession } from "next-auth/react"; 
 
 interface VideoModalProps {
   video: IVideo;
   onClose: () => void;
   onDelete: (videoId: string) => void;
   canDelete: boolean;
-  // 1. ADD THIS NEW PROP
   onVideoUpdate: (updatedVideo: IVideo) => void;
 }
 
@@ -26,14 +25,12 @@ export default function VideoModal({ video, onClose, onDelete, canDelete, onVide
     return () => window.removeEventListener("keydown", handleEsc);
   }, [onClose]);
 
-  // Handle Reaction Click
   const handleReaction = async (emoji: string) => {
     if (!session) {
       alert("Please login to react");
       return;
     }
 
-    // 1. Optimistic Update (Update UI immediately)
     const userId = session.user.id;
     const currentReactions = [...reactions];
     const userReactionIndex = currentReactions.findIndex((r: any) => 
@@ -44,20 +41,16 @@ export default function VideoModal({ video, onClose, onDelete, canDelete, onVide
 
     if (userReactionIndex > -1) {
       if (currentReactions[userReactionIndex].emoji === emoji) {
-        // Toggle off
         newReactions.splice(userReactionIndex, 1);
       } else {
-        // Update emoji
         newReactions[userReactionIndex] = { ...newReactions[userReactionIndex], emoji };
       }
     } else {
-      // Add new
       newReactions.push({ user: userId, emoji });
     }
 
-    setReactions(newReactions); // Update UI
+    setReactions(newReactions);
 
-    // 2. Call API
     try {
       const res = await fetch("/api/video/reaction", {
         method: "POST",
@@ -66,20 +59,13 @@ export default function VideoModal({ video, onClose, onDelete, canDelete, onVide
       });
 
       if (!res.ok) {
-        // Revert if failed
         setReactions(currentReactions);
-        alert("Failed to react");
       } else {
-        // 2. SUCCESS! GET DATA AND UPDATE PARENT
         const data = await res.json();
-        
-        // Create a new video object with the updated reactions from the server
         const updatedVideo = {
           ...video,
           reactions: data.reactions
         };
-
-        // Tell the Feed Page to update its list
         onVideoUpdate(updatedVideo);
       }
     } catch (error) {
@@ -87,71 +73,101 @@ export default function VideoModal({ video, onClose, onDelete, canDelete, onVide
     }
   };
 
-  // Helper to get email safely
   const uploaderEmail = typeof video.uploader === 'object' && video.uploader?.email 
     ? video.uploader.email 
     : "Unknown User";
+  
+  const uploaderName = uploaderEmail.split("@")[0];
 
-  // Check if current user has reacted
   const myReaction = reactions.find((r: any) => 
     (r.user._id || r.user) === session?.user?.id
   )?.emoji;
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-90 backdrop-blur-sm p-4">
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/95 backdrop-blur-sm p-4 animate-in fade-in duration-300">
+      {/* Close Button (Absolute Top Right) */}
       <button
         onClick={onClose}
-        className="absolute top-4 right-4 text-white hover:text-gray-300 z-50 p-2"
+        className="absolute top-4 right-4 z-50 p-2 rounded-full bg-white/10 hover:bg-white/20 text-white transition-all backdrop-blur-md"
       >
-        <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={2} stroke="currentColor" className="w-8 h-8">
+        <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={2} stroke="currentColor" className="w-6 h-6">
           <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
         </svg>
       </button>
 
-      <div className="relative w-full max-w-5xl max-h-[90vh] flex flex-col md:flex-row bg-gray-900 rounded-lg overflow-hidden shadow-2xl">
+      <div className="relative w-full max-w-6xl max-h-[90vh] flex flex-col md:flex-row bg-gray-900 rounded-xl overflow-hidden shadow-2xl border border-white/10">
         
-        <div className="flex-1 bg-black flex items-center justify-center relative">
-           <Video
-              urlEndpoint={process.env.NEXT_PUBLIC_URL_ENDPOINT!}
+        {/* LEFT: VIDEO PLAYER */}
+        <div className="flex-1 bg-black flex items-center justify-center relative min-h-[40vh]">
+           <IKVideo
               src={video.videoUrl}
+              urlEndpoint={process.env.NEXT_PUBLIC_URL_ENDPOINT}
               controls={true}
               autoPlay={true}
-              className="max-w-full max-h-[70vh] md:max-h-[85vh] w-auto h-auto object-contain"
+              className="w-full h-full max-h-[85vh] object-contain"
             />
         </div>
 
-        <div className="p-6 w-full md:w-80 bg-white flex flex-col shrink-0 overflow-y-auto">
-          <h2 className="text-2xl font-bold text-gray-900 mb-2">{video.title}</h2>
-          <p className="text-gray-600 whitespace-pre-wrap flex-1 mb-4">{video.description}</p>
+        {/* RIGHT: SIDEBAR DETAILS */}
+        <div className="w-full md:w-96 bg-gray-900/95 border-l border-white/10 flex flex-col shrink-0">
           
-          {/* --- REACTION SECTION --- */}
-          <div className="mb-6">
-            <h3 className="text-sm font-semibold text-gray-500 mb-2">Reactions</h3>
-            <div className="flex flex-wrap gap-2">
-              {EMOJI_OPTIONS.map((emoji) => (
-                <button
-                  key={emoji}
-                  onClick={() => handleReaction(emoji)}
-                  className={`px-3 py-2 rounded-full text-lg transition-all border ${
-                    myReaction === emoji 
-                      ? "bg-blue-100 border-blue-400 scale-110" 
-                      : "bg-gray-50 border-gray-200 hover:bg-gray-100"
-                  }`}
-                >
-                  {emoji} <span className="text-xs text-gray-600 ml-1">
-                    {reactions.filter((r: any) => r.emoji === emoji).length}
-                  </span>
-                </button>
-              ))}
+          {/* Header Section */}
+          <div className="p-6 border-b border-white/10">
+            <h2 className="text-2xl font-bold bg-gradient-to-r from-blue-400 to-purple-400 bg-clip-text text-transparent mb-1">
+              {video.title}
+            </h2>
+            
+            <div className="flex items-center gap-2 mt-3">
+              <div className="w-8 h-8 rounded-full bg-gradient-to-br from-gray-700 to-gray-600 flex items-center justify-center text-xs font-bold text-white border border-white/10">
+                {uploaderName[0].toUpperCase()}
+              </div>
+              <p className="text-sm text-gray-400 hover:text-white transition-colors cursor-pointer">
+                {uploaderName}
+              </p>
             </div>
           </div>
-          {/* ------------------------- */}
 
-          <div className="mt-auto pt-4 border-t border-gray-100">
-            <p className="text-sm text-gray-500 mb-4">
-              Uploaded by: <span className="font-medium text-gray-800">{uploaderEmail}</span>
+          {/* Scrollable Description */}
+          <div className="flex-1 p-6 overflow-y-auto custom-scrollbar">
+            <h3 className="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-2">Description</h3>
+            <p className="text-gray-300 text-sm leading-relaxed whitespace-pre-wrap">
+              {video.description}
             </p>
+          </div>
+          
+          {/* Footer: Reactions & Actions */}
+          <div className="p-6 bg-gray-800/50 border-t border-white/10">
+            
+            {/* Reaction Dock */}
+            <div className="mb-6">
+              <div className="flex items-center justify-between mb-3">
+                <span className="text-xs text-gray-400 font-medium">React to this video</span>
+                <span className="text-xs text-gray-500">{reactions.length} total</span>
+              </div>
+              <div className="flex flex-wrap gap-2 justify-center bg-black/20 p-3 rounded-xl border border-white/5">
+                {EMOJI_OPTIONS.map((emoji) => (
+                  <button
+                    key={emoji}
+                    onClick={() => handleReaction(emoji)}
+                    className={`
+                      relative w-10 h-10 flex items-center justify-center rounded-full text-lg transition-all duration-200
+                      hover:scale-110 active:scale-95
+                      ${myReaction === emoji 
+                        ? "bg-blue-500/20 border border-blue-500 shadow-[0_0_10px_rgba(59,130,246,0.5)]" 
+                        : "bg-white/5 border border-white/5 hover:bg-white/10"}
+                    `}
+                  >
+                    {emoji}
+                    {/* Tiny counter badge for specific emoji */}
+                    <span className="absolute -top-1 -right-1 text-[9px] bg-black text-gray-300 px-1 rounded-full">
+                       {reactions.filter((r: any) => r.emoji === emoji).length}
+                    </span>
+                  </button>
+                ))}
+              </div>
+            </div>
 
+            {/* Delete Button (Only if Owner) */}
             {canDelete && (
               <button
                 onClick={() => {
@@ -159,8 +175,11 @@ export default function VideoModal({ video, onClose, onDelete, canDelete, onVide
                     onDelete(video._id as string);
                   }
                 }}
-                className="w-full flex items-center justify-center gap-2 bg-red-100 text-red-600 px-4 py-2 rounded-lg hover:bg-red-200 transition-colors font-medium"
+                className="w-full flex items-center justify-center gap-2 bg-red-500/10 text-red-400 border border-red-500/20 px-4 py-3 rounded-xl hover:bg-red-500/20 transition-all text-sm font-medium group"
               >
+                <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" className="w-5 h-5 group-hover:scale-110 transition-transform">
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M14.74 9l-.346 9m-4.788 0L9.26 9m9.968-3.21c.342.052.682.107 1.022.166m-1.022-.165L18.16 19.673a2.25 2.25 0 01-2.244 2.077H8.084a2.25 2.25 0 01-2.244-2.077L4.772 5.79m14.456 0a48.108 48.108 0 00-3.478-.397m-12 .562c.34-.059.68-.114 1.022-.165m0 0a48.11 48.11 0 013.478-.397m7.5 0v-.916c0-1.18-.91-2.164-2.09-2.201a51.964 51.964 0 00-3.32 0c-1.18.037-2.09 1.022-2.09 2.201v.916m7.5 0a48.667 48.667 0 00-7.5 0" />
+                </svg>
                 Delete Video
               </button>
             )}
@@ -168,6 +187,7 @@ export default function VideoModal({ video, onClose, onDelete, canDelete, onVide
         </div>
       </div>
       
+      {/* Background Click to Close */}
       <div className="absolute inset-0 -z-10" onClick={onClose}></div>
     </div>
   );

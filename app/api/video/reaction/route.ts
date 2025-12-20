@@ -1,4 +1,3 @@
-// app/api/video/reaction/route.ts
 import { authOptions } from "@/app/api/auth/[...nextauth]/route";
 import { connectToDatabase } from "@/lib/db";
 import Video from "@/models/Video";
@@ -25,24 +24,19 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: "Video not found" }, { status: 404 });
     }
 
-    // Check if user has already reacted
     const existingReactionIndex = video.reactions.findIndex(
       (r: any) => r.user.toString() === session.user.id
     );
 
     if (existingReactionIndex > -1) {
-      // User has already reacted
       const existingReaction = video.reactions[existingReactionIndex];
 
       if (existingReaction.emoji === emoji) {
-        // Clicked same emoji -> Remove it (Toggle off)
         video.reactions.splice(existingReactionIndex, 1);
       } else {
-        // Clicked different emoji -> Update it
         existingReaction.emoji = emoji;
       }
     } else {
-      // New reaction -> Add it
       video.reactions.push({
         user: session.user.id,
         emoji: emoji,

@@ -1,4 +1,3 @@
-// app/components/LiveThumbnail.tsx
 "use client";
 
 import { useEffect, useRef } from "react";
@@ -38,7 +37,7 @@ export default function LiveThumbnail({ src }: LiveThumbnailProps) {
         muted
         playsInline
         loop
-        preload="metadata" // Only load enough to show a frame
+        preload="metadata"
       />
       {/* Overlay to indicate it's a video */}
       <div className="absolute top-2 right-2">

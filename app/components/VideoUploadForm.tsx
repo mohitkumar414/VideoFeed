@@ -11,16 +11,14 @@ export default function VideoUploadForm() {
   const [uploading, setUploading] = useState(false);
   const [progress, setProgress] = useState<string>("");
 
-  // 1. Handle File Selection
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const selectedFile = e.target.files?.[0];
 
     if (!selectedFile) return;
 
-    // Check file size (100 MB = 100 * 1024 * 1024 bytes)
     if (selectedFile.size > 100 * 1024 * 1024) {
       alert("File size exceeds 100 MB limit.");
-      e.target.value = ""; // Clear the input
+      e.target.value = "";
       setFile(null);
       return;
     }
@@ -28,7 +26,7 @@ export default function VideoUploadForm() {
     setFile(selectedFile);
   };
 
-  // 2. Manual Upload Logic
+  // Manual Upload Logic
   const handleUpload = async () => {
     if (!file || !title || !description) {
       alert("Please fill in all fields and select a file.");
@@ -39,15 +37,13 @@ export default function VideoUploadForm() {
     setProgress("Starting upload...");
 
     try {
-      // Step A: Get Auth Parameters from your backend
       const authResponse = await fetch("/api/imagekit-auth");
       if (!authResponse.ok) throw new Error("Failed to get auth params");
       const { signature, expire, token } = await authResponse.json();
 
-      // Step B: Prepare the form data for ImageKit
       const formData = new FormData();
       formData.append("file", file);
-      formData.append("fileName", title.replace(/\s+/g, "-")); // Clean filename
+      formData.append("fileName", title.replace(/\s+/g, "-"));
       formData.append("publicKey", process.env.NEXT_PUBLIC_IMAGEKIT_PUBLIC_KEY!);
       formData.append("signature", signature);
       formData.append("expire", expire);
@@ -57,7 +53,7 @@ export default function VideoUploadForm() {
 
       setProgress("Uploading to ImageKit...");
 
-      // Step C: Upload directly to ImageKit API
+      // Upload directly to ImageKit API
       const uploadResponse = await fetch(
         "https://upload.imagekit.io/api/v1/files/upload",
         {
@@ -73,13 +69,12 @@ export default function VideoUploadForm() {
 
       const uploadResult = await uploadResponse.json();
 
-      // Step D: Generate Thumbnail URL (Standard logic)
+      // Generate Thumbnail URL (Standard logic)
       // Manually constructing the thumbnail URL to skip black frames
       const thumbnailUrl = `${uploadResult.url}?tr=w-400,so-1.5`;
 
       setProgress("Saving details...");
 
-      // Step E: Save metadata to your MongoDB
       const dbResponse = await fetch("/api/video", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -92,7 +87,6 @@ export default function VideoUploadForm() {
       });
 
       if (!dbResponse.ok) {
-        // Parse the error message from the backend
         const errorData = await dbResponse.json();
         throw new Error(errorData.error || "Failed to save to database");
       }

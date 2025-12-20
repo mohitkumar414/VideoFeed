@@ -1,11 +1,9 @@
-// app/api/auth/[...nextauth]/route.ts
-import NextAuth, { AuthOptions } from "next-auth"; // Import AuthOptions type
+import NextAuth, { AuthOptions } from "next-auth";
 import CredentialsProvider from "next-auth/providers/credentials";
 import bcrypt from "bcryptjs";
 import { connectToDatabase } from "@/lib/db";
 import User from "@/models/User";
 
-// 1. Define the options separately and EXPORT them
 export const authOptions: AuthOptions = {
   providers: [
     CredentialsProvider({
@@ -39,10 +37,9 @@ export const authOptions: AuthOptions = {
     }),
   ],
   callbacks: {
-    // We need these callbacks to make the user ID available to the session
     async session({ session, token }) {
       if (token && session.user) {
-        session.user.id = token.sub as string; // Add ID to session
+        session.user.id = token.sub as string;
       }
       return session;
     },
@@ -62,7 +59,6 @@ export const authOptions: AuthOptions = {
   secret: process.env.NEXTAUTH_SECRET,
 };
 
-// 2. Pass the exported options to NextAuth
 const handler = NextAuth(authOptions);
 
 export { handler as GET, handler as POST };

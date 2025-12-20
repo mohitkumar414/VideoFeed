@@ -1,8 +1,6 @@
-// app/api/auth/register/route.ts
 import { connectToDatabase } from "@/lib/db";
 import User from "@/models/User";
 import { NextRequest, NextResponse } from "next/server";
-// NO bcrypt import needed here
 
 export async function POST(request: NextRequest) {
   try {
@@ -25,10 +23,9 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Pass the PLAIN TEXT password. The model will hash it.
     await User.create({
       email,
-      password: password, // <-- No hashing here
+      password: password,
     });
 
     return NextResponse.json(
