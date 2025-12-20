@@ -16,6 +16,7 @@ const EMOJI_OPTIONS = ["👍", "❤️", "😂", "😮", "😢", "🔥"];
 export default function VideoModal({ video, onClose, onDelete, canDelete, onVideoUpdate }: VideoModalProps) {
   const { data: session } = useSession();
   const [reactions, setReactions] = useState(video.reactions || []);
+  const [isBuffering, setIsBuffering] = useState(true);
 
   useEffect(() => {
     const handleEsc = (e: KeyboardEvent) => {
@@ -95,7 +96,7 @@ export default function VideoModal({ video, onClose, onDelete, canDelete, onVide
         </svg>
       </button>
 
-      <div className="relative w-full max-w-6xl max-h-[90vh] flex flex-col md:flex-row bg-gray-900 rounded-xl overflow-hidden shadow-2xl border border-white/10">
+      <div className="relative w-full max-w-6xl max-h-[90vh] flex flex-col md:flex-row bg-gray-900 rounded-xl overflow-hidden shadow-[0_0_50px_rgba(59,130,246,0.2)] border border-blue-500/20">
         
         {/* LEFT: VIDEO PLAYER */}
         <div className="flex-1 bg-black flex items-center justify-center relative min-h-[40vh]">

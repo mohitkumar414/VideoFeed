@@ -7,7 +7,7 @@ import VideoModal from "@/app/components/VideoModal";
 import VideoCard from "@/app/components/VideoCard";
 import SkeletonFeed from "@/app/components/SkeletonFeed";
 import VideoUploadForm from "@/app/components/VideoUploadForm";
-import { signOut } from "next-auth/react";
+import { signOut, useSession } from "next-auth/react";
 
 export default function FeedPage() {
   const [videos, setVideos] = useState<IVideo[]>([]);
@@ -16,6 +16,7 @@ export default function FeedPage() {
   const [searchQuery, setSearchQuery] = useState("");
   const [selectedVideo, setSelectedVideo] = useState<IVideo | null>(null);
   const [showUploadModal, setShowUploadModal] = useState(false);
+  const { data: session } = useSession();
 
   const fetchVideos = async () => {
     try {
@@ -47,7 +48,7 @@ export default function FeedPage() {
   };
 
   const handleVideoUpdate = (updatedVideo: IVideo) => {
-    setVideos((prev) => 
+    setVideos((prev) =>
       prev.map((v) => (v._id === updatedVideo._id ? updatedVideo : v))
     );
     setSelectedVideo(updatedVideo);
@@ -66,7 +67,7 @@ export default function FeedPage() {
           <h1 className="text-2xl font-bold bg-gradient-to-r from-blue-400 to-purple-500 bg-clip-text text-transparent">
             VideoFeed
           </h1>
-          
+
           <div className="flex items-center gap-4 w-full sm:w-auto">
             {/* Search Bar */}
             <div className="relative flex-1 sm:flex-none sm:w-72">
@@ -91,7 +92,7 @@ export default function FeedPage() {
             </button>
 
             {/* Logout Button */}
-            <button 
+            <button
               onClick={() => signOut()}
               className="px-4 py-2 bg-red-600/20 text-red-500 hover:bg-red-600/30 border border-red-600/50 rounded-full text-sm font-medium transition-colors whitespace-nowrap"
             >
@@ -103,7 +104,7 @@ export default function FeedPage() {
 
       {/* MAIN FEED CONTENT */}
       <main className="max-w-7xl mx-auto p-4 sm:p-6">
-        
+
         {error && (
           <div className="text-center py-12">
             <p className="text-red-400 bg-red-900/20 px-4 py-2 rounded-lg inline-block">
@@ -139,7 +140,12 @@ export default function FeedPage() {
           video={selectedVideo}
           onClose={() => setSelectedVideo(null)}
           onDelete={handleDeleteVideo}
-          canDelete={true}
+          canDelete={
+            !!session?.user?.id && // User must be logged in
+            (typeof selectedVideo.uploader === "string"
+              ? selectedVideo.uploader === session.user.id
+              : selectedVideo.uploader?._id === session.user.id)
+          }
           onVideoUpdate={handleVideoUpdate}
         />
       )}
@@ -148,20 +154,20 @@ export default function FeedPage() {
       {showUploadModal && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-sm p-4">
           <div className="bg-gray-900 border border-white/10 rounded-2xl w-full max-w-md p-6 relative shadow-2xl">
-             {/* Close Button */}
-             <button 
-               onClick={() => setShowUploadModal(false)}
-               className="absolute top-4 right-4 text-gray-400 hover:text-white"
-             >
-               <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={2} stroke="currentColor" className="w-6 h-6">
-                 <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
-               </svg>
-             </button>
+            {/* Close Button */}
+            <button
+              onClick={() => setShowUploadModal(false)}
+              className="absolute top-4 right-4 text-gray-400 hover:text-white"
+            >
+              <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={2} stroke="currentColor" className="w-6 h-6">
+                <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
+              </svg>
+            </button>
 
-             <h2 className="text-xl font-bold text-white mb-4">Upload New Video</h2>
-             
-             {/* Render the Form */}
-             <VideoUploadForm />
+            <h2 className="text-xl font-bold text-white mb-4">Upload New Video</h2>
+
+            {/* Render the Form */}
+            <VideoUploadForm />
           </div>
         </div>
       )}
